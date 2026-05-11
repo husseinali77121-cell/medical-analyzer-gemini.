@@ -2,50 +2,90 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# إعدادات الصفحة
-st.set_page_config(page_title="Medical Image Analyzer", layout="centered")
+# إعدادات الصفحة (عرض واسع لتنظيم النوافذ)
+st.set_page_config(page_title="نظام التحليل الطبي الشامل", layout="wide")
 
-# العنوان والوصف
-st.title("🩺 محلل البيانات الطبية الذكي")
-st.write("قم برفع صور التاريخ المرضي ونتائج التحاليل للحصول على قراءة تحليلية.")
+st.title("🩺 نظام التحليل الطبي الشامل (Gemini AI)")
+st.write("يقوم النظام باستخراج بيانات المريض تلقائياً، قراءة نتائج التحاليل، وربطها بالتاريخ المرضي لتقديم تعليق طبي دقيق.")
 
-# إدخال الـ API Key في الشريط الجانبي
+# الشريط الجانبي لإعدادات الـ API
 with st.sidebar:
-    st.header("الإعدادات")
-    api_key = st.text_input("Google API Key:", type="password")
-    model_choice = st.selectbox("اختر النموذج:", ["gemini-1.5-flash", "gemini-1.5-pro"])
-    st.info("موديل Flash سريع جداً، بينما Pro أفضل في التحليل العميق.")
+    st.header("🔑 إعدادات النظام")
+    api_key = st.text_input("أدخل Google API Key:", type="password")
+    model_choice = st.selectbox("اختر النموذج:", ["gemini-1.5-pro", "gemini-1.5-flash"])
+    st.caption("💡 نوصي باستخدام gemini-1.5-pro للحصول على أدق قراءة للخطوط اليدوية والتقارير المعقدة.")
 
 if api_key:
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(model_choice)
 
-    # خانة رفع الملفات
-    uploaded_files = st.file_uploader("ارفع صور (JPG, PNG)", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
+    # تقسيم الشاشة إلى عمودين (عمود للإدخال وعمود لمعاينة الصور)
+    col1, col2 = st.columns([2, 1])
 
-    if uploaded_files:
-        images = []
-        for uploaded_file in uploaded_files:
-            img = Image.open(uploaded_file)
-            images.append(img)
+    with col1:
+        st.subheader("📥 إدخال بيانات وحالة المريض")
         
-        # عرض مصغرات للصور المرفوعة
-        st.image(images, width=150, caption=[f"صورة {i+1}" for i in range(len(images))])
+        # نافذة إدخال التاريخ المرضي اليدوي
+        manual_history = st.text_area(
+            "التاريخ المرضي والأدوية (إدخال يدوي):", 
+            placeholder="مثال: يتلقى علاج للسكري (ميتفورمين) وضغط الدم، أو يعاني من ارتفاع الكوليسترول..."
+        )
 
-        # منطقة الأوامر (Prompt)
-        prompt_text = st.text_area("التعليمات:", 
-                                  value="اقرأ البيانات الموجودة في هذه الصور (سواء كانت بخط اليد أو مطبوعة). لخص التاريخ المرضي ونتائج التحاليل، ونبهني لأي قيم خارج المعدل الطبيعي.")
+        # نافذة رفع الصور (تدعم الرفع المتعدد)
+        uploaded_files = st.file_uploader(
+            "ارفع صور التحاليل والتقارير الطبية (يمكنك تحديد أكثر من صورة معاً):", 
+            type=['png', 'jpg', 'jpeg'], 
+            accept_multiple_files=True
+        )
 
-        if st.button("بدء التحليل"):
-            with st.spinner("جاري معالجة الصور والتحليل..."):
+    # معالجة الصور المرفوعة وعرضها في العمود الثاني
+    images = []
+    if uploaded_files:
+        with col2:
+            st.subheader("🖼️ الصور المرفوعة")
+            for i, file in enumerate(uploaded_files):
+                img = Image.open(file)
+                images.append(img)
+                # عرض معاينة للصور
+                st.image(img, caption=f"صورة {i+1}", use_column_width=True)
+
+    # زر تنفيذ التحليل
+    st.divider()
+    if st.button("🚀 بدء التحليل الطبي الشامل", use_container_width=True):
+        if not images:
+            st.warning("يرجى رفع صورة واحدة على الأقل لنتائج التحاليل.")
+        else:
+            with st.spinner("جاري قراءة الصور واستخراج البيانات وكتابة التقرير الطبي..."):
+                # صياغة دقيقة للأمر الموجه للذكاء الاصطناعي لضمان هيكل التقرير
+                prompt = f"""
+                أنت خبير طبي ومحلل نتائج مختبرات محترف. يرجى تحليل الصور المرفقة بدقة شديدة واستخراج المطلوب وفقاً للهيكل التالي باللغة العربية:
+
+                ## 1. البيانات الأساسية للمريض
+                استخرج البيانات التالية من الصور المرفقة (إن وجدت):
+                - **الاسم:**
+                - **العمر:**
+                - **الجنس:**
+
+                ## 2. التاريخ المرضي
+                - **المستخرج من الصور:** (ابحث عن أي تاريخ مرضي أو ملاحظات مكتوبة أسفل ورقة النتائج أو في التقرير).
+                - **المدخل بواسطة الطبيب:** {manual_history if manual_history.strip() else 'لا يوجد إدخال إضافي'}
+
+                ## 3. قراءة النتائج المخبرية
+                - استعرض أهم النتائج المستخرجة.
+                - ركز بشكل خاص على **القيم غير الطبيعية (Abnormal Values)** مع ذكر المعدل الطبيعي (Reference Range) المرفق بجانبها في الصورة.
+
+                ## 4. التعليق الطبي والربط الإكلينيكي
+                - قم بعمل ربط علمي بين النتائج المخبرية والتاريخ المرضي (مثل تأثير أدوية السكر أو الضغط أو الدهون على النتائج الحالية).
+                - قدم تفسيراً إكلينيكياً متكاملاً للحالة بناءً على المعطيات.
+                """
+
                 try:
-                    # إرسال الصور مع النص
-                    response = model.generate_content([prompt_text] + images)
+                    # إرسال النص مع قائمة الصور دفعة واحدة للنموذج
+                    response = model.generate_content([prompt] + images)
                     
-                    st.divider()
-                    st.subheader("📝 نتائج التحليل:")
+                    st.subheader("📋 التقرير الطبي المتكامل")
                     st.markdown(response.text)
                 except Exception as e:
-                    st.error(f"حدث خطأ: {e}")
+                    st.error(f"حدث خطأ أثناء الاتصال بنموذج Gemini: {str(e)}")
 else:
-    st.warning("يرجى إدخال مفتاح API في الشريط الجانبي لتفعيل البرنامج.")
+    st.info("👈 يرجى إدخال مفتاح API في الشريط الجانبي لتفعيل واجهة البرنامج.")
