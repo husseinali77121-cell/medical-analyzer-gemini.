@@ -25,18 +25,46 @@ if not api_key:
     st.error("❌ GEMINI_API_KEY not found in Streamlit Secrets")
     st.stop()
 
-# Gemini Client
-client = genai.Client(api_key=api_key)
+# ==========================================
+# GEMINI CLIENT
+# ==========================================
+try:
+    client = genai.Client(api_key=api_key)
+except Exception as e:
+    st.error(f"Failed to initialize Gemini Client: {e}")
+    st.stop()
 
 # ==========================================
-# OPTIONAL CLINICAL NOTES
+# MODEL SELECTION
+# ==========================================
+st.subheader("AI Model")
+
+model_option = st.selectbox(
+    "Select Gemini Model",
+    [
+        "gemini-2.5-flash",
+        "gemini-2.5-pro"
+    ]
+)
+
+# ==========================================
+# OPTIONAL NOTES
 # ==========================================
 st.subheader("Additional Clinical Notes (Optional)")
 
 extra_notes = st.text_area(
-    "Add any extra information not present in the report images",
-    placeholder="Example: patient is pregnant, taking statins, chemotherapy, dialysis, smoker, etc.",
-    height=120
+    "Add any clinical information not clearly present in the report images",
+    placeholder=(
+        "Examples:\n"
+        "- Patient is diabetic\n"
+        "- Hypertension\n"
+        "- Taking statins\n"
+        "- Chronic kidney disease\n"
+        "- Pregnancy\n"
+        "- Smoker\n"
+        "- Chemotherapy"
+    ),
+    height=150
 )
 
 # ==========================================
@@ -49,79 +77,125 @@ uploaded_files = st.file_uploader(
 )
 
 # ==========================================
-# ANALYSIS
+# ANALYSIS BUTTON
 # ==========================================
-if st.button("🚀 Start Smart Analysis"):
+if st.button("🚀 Start Smart Medical Analysis"):
 
     if not uploaded_files:
-        st.warning("Please upload at least one image.")
+        st.warning("Please upload at least one laboratory image.")
         st.stop()
 
     try:
 
-        with st.spinner("Analyzing medical reports..."):
+        with st.spinner("Analyzing laboratory reports with AI..."):
 
-            images = [
-                Image.open(file).convert("RGB")
-                for file in uploaded_files
-            ]
+            # Convert uploaded files to images
+            images = []
 
+            for file in uploaded_files:
+                img = Image.open(file).convert("RGB")
+                images.append(img)
+
+            # ==========================================
+            # PROFESSIONAL MEDICAL PROMPT
+            # ==========================================
             prompt = f"""
-You are an expert laboratory medicine consultant.
+You are a highly experienced clinical pathologist and laboratory medicine consultant.
 
-Your tasks:
+Your task is to carefully analyze ALL uploaded laboratory report images with maximum medical accuracy.
 
-1. Extract:
+INSTRUCTIONS:
+
+1. Extract accurately:
 - Patient name
 - Age
 - Gender
 - Medical history
 - Current medications
-- Laboratory results
+- Current laboratory results
+- Previous laboratory results (if present in report)
 - Reference ranges
+- Dates of tests
 
-2. Detect:
+2. Compare:
+- Current vs previous laboratory values
+- Detect improvement, deterioration, or stability
+- Mention clinically significant changes
+
+3. Correlate findings with:
+- Medical history
+- Current medications
+- Chronic diseases
+- Possible drug effects on laboratory values
+
+4. Detect:
 - High values
 - Low values
 - Critical abnormalities
+- Dangerous trends
+- Possible laboratory inconsistencies
 
-3. Correlate findings clinically.
+5. Generate a PROFESSIONAL ENGLISH MEDICAL REPORT with the following sections:
 
-4. Mention possible interactions between:
-- diseases
-- medications
-- laboratory abnormalities
+# Patient Information
+# Medical History
+# Current Medications
+# Current Laboratory Results
+# Previous Laboratory Results
+# Comparative Analysis
+# Abnormal Findings
+# Clinical Interpretation
+# Important Alerts
+# Recommendations
 
-5. Generate a professional Arabic medical report with sections:
+6. Use professional medical terminology.
 
-- بيانات المريض
-- الأدوية الحالية
-- التاريخ المرضي
-- النتائج المستخرجة
-- القيم غير الطبيعية
-- التفسير الطبي
-- التوصيات
+7. Be highly accurate and conservative.
 
-6. Never invent values not visible in images.
+8. Do NOT invent values not clearly visible in images.
 
-Additional information from user:
-{extra_notes if extra_notes.strip() else "No extra information provided."}
+9. If previous results are present at the bottom of the report,
+compare them carefully with the current results.
+
+10. Mention possible medication effects on abnormal values when relevant.
+
+Additional clinical notes from user:
+{extra_notes if extra_notes.strip() else "No additional notes provided."}
 """
 
+            # ==========================================
+            # GEMINI REQUEST
+            # ==========================================
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=[prompt, *images]
+                model=model_option,
+                contents=[prompt, *images],
+                config={
+                    "temperature": 0.2
+                }
             )
 
+            # ==========================================
+            # OUTPUT
+            # ==========================================
             st.success("✅ Analysis completed successfully")
 
             st.markdown("## Smart Medical Report")
+
             st.write(response.text)
 
     except Exception as e:
+
         st.error(f"Error during analysis: {e}")
+
+        if "quota" in str(e).lower():
+            st.warning(
+                "Gemini Pro quota may be exceeded or unavailable. "
+                "Try using gemini-2.5-flash."
+            )
 
 # ==========================================
 # FOOTER
 # ==========================================
-st.info("Developed by Dr/Hussein Ali")
+st.divider()
+
+st.info("MedInsight Analyzer | Developed by Dr/Hussein Ali")
