@@ -2,66 +2,58 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# إعدادات الصفحة
-st.set_page_config(page_title="نظام التحليل الطبي - معامل أورنج", page_icon="🩺", layout="wide")
+# إعداد الصفحة
+st.set_page_config(page_title="معامل أورنج - التحليل الذكي", layout="wide")
 
-# جلب المفتاح التلقائي من Secrets
+# جلب المفتاح
 api_key = st.secrets.get("GEMINI_API_KEY")
 
-st.title("🩺 نظام التحليل الطبي (Gemini AI) الشامل")
-st.write("خاص بمعامل أورنج - 6 أكتوبر / الشيخ زايد")
+st.title("🩺 نظام التحليل الطبي (معامل أورنج)")
 
 if api_key:
     try:
-        # إعداد المكتبة
         genai.configure(api_key=api_key)
         
-        # اختيار الموديل المستقر
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # كود ذكي لاختيار الموديل المتاح
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            # تجربة وهمية للتأكد من الموديل
+            model.get_model() 
+        except:
+            model = genai.GenerativeModel('gemini-pro-vision') # كود احتياطي
 
         col1, col2 = st.columns([1.5, 1])
 
         with col1:
-            st.subheader("📝 مدخلات الحالة")
-            manual_history = st.text_area(
-                "التاريخ المرضي الإضافي (سكر، ضغط، دهون، أدوية):", 
-                placeholder="اكتب أي ملاحظات تود دمجها في التقرير..."
-            )
-            uploaded_files = st.file_uploader(
-                "ارفع صور التحاليل (يمكن رفع أكثر من صورة):", 
-                type=['png', 'jpg', 'jpeg'], 
-                accept_multiple_files=True
-            )
+            st.subheader("📝 بيانات المريض والحالة")
+            manual_history = st.text_area("التاريخ المرضي (اختياري):", placeholder="مثلاً: مريض ضغط، سكر...")
+            uploaded_files = st.file_uploader("ارفع صور التحاليل:", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
 
         with col2:
             if uploaded_files:
-                st.subheader("🖼️ الصور المرفوعة")
-                images = []
-                for i, file in enumerate(uploaded_files):
-                    img = Image.open(file)
-                    images.append(img)
+                images = [Image.open(f) for f in uploaded_files]
+                for i, img in enumerate(images):
                     st.image(img, caption=f"صورة {i+1}", use_column_width=True)
 
-        if st.button("🚀 بدء التحليل الطبي المتكامل", use_container_width=True):
+        if st.button("🚀 بدء التحليل الطبي واستخراج البيانات", use_container_width=True):
             if not uploaded_files:
-                st.error("يرجى رفع صور التحاليل أولاً.")
+                st.error("يرجى رفع الصور أولاً.")
             else:
-                with st.spinner("جاري استخراج البيانات وتحليل الحالة..."):
-                    # تعليمات دقيقة لاستخراج الاسم والسن والتعليق
+                with st.spinner("جاري القراءة والتحليل..."):
                     prompt = f"""
-                    أنت خبير مختبرات طبية محترف. حلل الصور المرفقة واستخرج الآتي باللغة العربية:
-                    1. بيانات المريض: (الاسم، السن، الجنس) من ترويسة النتائج.
-                    2. التاريخ المرضي: ادمج الملاحظات المكتوبة أسفل الصور مع هذا التاريخ: {manual_history}
-                    3. النتائج: وضح القيم غير الطبيعية (High/Low) فقط.
-                    4. التعليق الطبي: قدم رؤية إكلينيكية تربط الحالة بالتاريخ المرضي.
+                    أنت طبيب مختبرات خبير. من الصور المرفقة:
+                    1. استخرج: (الاسم، السن، الجنس).
+                    2. اقرأ التاريخ المرضي أسفل الورقة وادمجه مع: {manual_history}
+                    3. لخص النتائج المرتفعة والمنخفضة.
+                    4. اكتب تعليقاً طبياً مهنياً.
+                    اجعل الرد منظماً جداً وباللغة العربية.
                     """
-                    
                     response = model.generate_content([prompt] + images)
-                    st.success("✅ تم التحليل بنجاح")
-                    st.markdown("---")
+                    st.success("✅ اكتمل التحليل")
                     st.markdown(response.text)
 
     except Exception as e:
-        st.error(f"حدث خطأ في النظام: {e}")
+        st.error(f"حدث خطأ: {e}")
+        st.info("نصيحة: تأكد من تحديث ملف requirements.txt كما ذكرت لك.")
 else:
-    st.info("👈 يرجى التأكد من إضافة GEMINI_API_KEY في إعدادات Secrets.")
+    st.warning("⚠️ يرجى إضافة GEMINI_API_KEY في إعدادات Secrets.")
