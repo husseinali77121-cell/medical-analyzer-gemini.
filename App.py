@@ -31,8 +31,8 @@ if api_key:
     try:
         # إعداد نموذج Gemini
         genai.configure(api_key=api_key)
-        # نستخدم pro لأنه الأفضل في تحليل الجداول الطبية المعقدة
-        model = genai.GenerativeModel('gemini-1.5-pro')
+        # استخدام gemini-1.5-flash – نموذج سريع وموثوق ومتاح لجميع المفاتيح
+        model = genai.GenerativeModel('gemini-1.5-flash')
 
         # تقسيم الواجهة لعمودين
         col1, col2 = st.columns([1.5, 1])
