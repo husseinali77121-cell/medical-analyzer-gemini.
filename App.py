@@ -14,7 +14,7 @@ st.set_page_config(
 # HEADER
 # =========================================================
 st.title("🩺 MedInsight Analyzer")
-st.caption("Advanced AI-Powered Laboratory Report Analysis")
+st.caption("Advanced AI-Powered Laboratory Report Analysis & Quality Review")
 st.caption("Developed by Dr/Hussein Ali")
 
 # =========================================================
@@ -41,7 +41,7 @@ except Exception as e:
 MODEL_NAME = "gemini-2.5-flash"
 
 # =========================================================
-# SIDEBAR
+# SIDEBAR SETTINGS
 # =========================================================
 with st.sidebar:
 
@@ -64,6 +64,11 @@ with st.sidebar:
 
     critical_alerts = st.checkbox(
         "Enable Critical Value Alerts",
+        value=True
+    )
+
+    laboratory_quality_review = st.checkbox(
+        "Enable Laboratory Quality Review",
         value=True
     )
 
@@ -120,7 +125,7 @@ if st.button("🚀 Start Smart Medical Analysis"):
                 images.append(img)
 
             # =========================================================
-            # DYNAMIC FEATURES
+            # DYNAMIC SETTINGS
             # =========================================================
             detailed_instruction = (
                 "Provide deep clinical interpretation and advanced laboratory reasoning."
@@ -131,7 +136,7 @@ if st.button("🚀 Start Smart Medical Analysis"):
             trend_instruction = (
                 "Carefully compare current and previous laboratory results."
                 if trend_analysis else
-                "Do not focus heavily on historical comparison."
+                "Historical comparison is optional."
             )
 
             medication_instruction = (
@@ -146,19 +151,52 @@ if st.button("🚀 Start Smart Medical Analysis"):
                 "Standard abnormality detection only."
             )
 
+            quality_instruction = (
+                """
+Perform ADVANCED LABORATORY QUALITY REVIEW.
+
+Carefully review the laboratory report for possible laboratory or reporting issues including:
+
+- Typographical mistakes
+- Incorrect medical terminology
+- Missing reference ranges
+- Missing interpretation
+- Missing critical alerts
+- Inconsistent units
+- Possible analytical inconsistencies
+- Contradictions between findings and interpretation
+- Missing clinically important comments
+- Reports requiring urgent physician attention
+- Possible pre-analytical or post-analytical issues
+- Incomplete reporting according to common laboratory guidelines
+- Possible formatting or reporting weaknesses
+
+If any issue is detected:
+- Clearly explain the issue
+- Suggest professional correction
+- Mention why the issue may be clinically important
+
+Generate a dedicated section titled:
+# Laboratory Quality Review
+"""
+                if laboratory_quality_review else
+                "Laboratory quality review is optional."
+            )
+
             # =========================================================
-            # MEDICAL PROMPT
+            # MAIN MEDICAL PROMPT
             # =========================================================
             prompt = f"""
 You are a world-class clinical pathologist and laboratory medicine consultant.
 
 Analyze ALL uploaded laboratory report images with maximum medical accuracy.
 
-GENERAL INSTRUCTIONS:
+GENERAL RULES:
 - Use professional medical terminology.
 - Be highly accurate and conservative.
-- Never invent values not clearly visible in the reports.
+- Never invent values not clearly visible in reports.
 - Focus on clinical significance.
+- Carefully evaluate both laboratory accuracy and reporting quality.
 
 TASKS:
 
@@ -211,12 +249,15 @@ ADDITIONAL INSTRUCTIONS:
 - {medication_instruction}
 - {critical_instruction}
 
+QUALITY REVIEW:
+{quality_instruction}
+
 Additional user notes:
 {extra_notes if extra_notes.strip() else "No additional notes provided."}
 """
 
             # =========================================================
-            # GEMINI RESPONSE
+            # GEMINI API REQUEST
             # =========================================================
             response = client.models.generate_content(
                 model=MODEL_NAME,
@@ -227,12 +268,12 @@ Additional user notes:
             )
 
             # =========================================================
-            # OUTPUT
+            # DISPLAY OUTPUT
             # =========================================================
             st.success("✅ Analysis completed successfully")
 
             st.markdown("---")
-            st.markdown("## 🧾 Smart Medical Report")
+            st.markdown("## 🧾 Smart Medical Report & Laboratory Quality Review")
 
             st.write(response.text)
 
@@ -242,7 +283,7 @@ Additional user notes:
             st.download_button(
                 label="📥 Download Report",
                 data=response.text,
-                file_name="medical_report.txt",
+                file_name="medical_quality_report.txt",
                 mime="text/plain"
             )
 
@@ -262,6 +303,6 @@ Additional user notes:
 st.markdown("---")
 
 st.info(
-    "MedInsight Analyzer | AI-Powered Clinical Laboratory Analysis System | "
-    "Developed by Dr/Hussein Ali"
+    "MedInsight Analyzer | AI-Powered Clinical Laboratory Analysis & "
+    "Quality Review System | Developed by Dr/Hussein Ali"
 )
