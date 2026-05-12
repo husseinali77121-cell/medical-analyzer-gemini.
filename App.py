@@ -11,6 +11,36 @@ st.set_page_config(
 )
 
 # =========================================================
+# SIMPLE LOGIN SYSTEM
+# =========================================================
+USERS = {
+    "user1": "pass123",
+    "user2": "med456",
+    "user3": "lab789"
+}
+
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+
+    st.title("🔐 MedInsight Analyzer Login")
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+
+        if username in USERS and USERS[username] == password:
+            st.session_state.authenticated = True
+            st.success("✅ Login successful")
+            st.rerun()
+        else:
+            st.error("❌ Invalid username or password")
+
+    st.stop()
+
+# =========================================================
 # HEADER
 # =========================================================
 st.title("🩺 MedInsight Analyzer")
@@ -91,6 +121,24 @@ extra_notes = st.text_area(
         "- Smoker"
     ),
     height=180
+)
+
+# =========================================================
+# AI QUESTION BOX
+# =========================================================
+st.subheader("AI Additional Instructions / سؤال إضافي للذكاء الاصطناعي")
+
+user_question = st.text_area(
+    "Ask AI to focus on specific medical or laboratory points",
+    placeholder=(
+        "Examples:\n"
+        "- Comment on CBC\n"
+        "- Evaluate peripheral smear\n"
+        "- Assess severity\n"
+        "- هل الحالة خطيرة؟\n"
+        "- اعمل تعليق علي صورة الدم"
+    ),
+    height=140
 )
 
 # =========================================================
@@ -254,6 +302,9 @@ QUALITY REVIEW:
 
 Additional user notes:
 {extra_notes if extra_notes.strip() else "No additional notes provided."}
+
+USER SPECIAL QUESTION / REQUEST:
+{user_question if user_question.strip() else "No additional AI question provided."}
 """
 
             # =========================================================
